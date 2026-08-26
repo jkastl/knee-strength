@@ -262,7 +262,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 
 /* ---------- Program data ---------- */
 const PROGRAM = [
@@ -516,8 +516,13 @@ function finishSession(){
 function endSession(){
   if(!running) return;
   if(!window.confirm("End this session?")) return;
+  const save = window.confirm("Save this session?\n\nOK records today's date. Cancel discards it.");
   running = false; paused = false;
   releaseWake();
+  if(save){
+    settings.lastSession = new Date().toISOString().slice(0,10);
+    saveSettings();
+  }
   renderHome();
   showView("home");
   $("app").removeAttribute("data-state");
