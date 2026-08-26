@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12181f">
+<title>Knee Rehab Timer</title>
+<style>
+  :root{
+    --bg:#12181f;
+    --surface:#1a2430;
+    --surface-2:#22303d;
+    --line:#2c3b49;
+    --text:#e8eef3;
+    --muted:#9fb0bd;
+    --accent:#8a94e2;
+    --wash:rgba(138,148,226,.12);
+    --danger:#e07a6b;
+    --radius:16px;
+    --tap:56px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.4;
+    overscroll-behavior:none;
+  }
+  #app{
+    min-height:100%;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    max-width:560px;
+    margin:0 auto;
+    padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));
+    transition:background-color .35s ease;
+  }
+  #app[data-state]{background:linear-gradient(180deg,var(--wash),transparent 46%)}
+  [data-state="getready"]{--accent:#8a94e2;--wash:rgba(138,148,226,.16)}
+  [data-state="work"]{--accent:#f2a541;--wash:rgba(242,165,65,.16)}
+  [data-state="rest"]{--accent:#45c2b3;--wash:rgba(69,194,179,.16)}
+  [data-state="switch"]{--accent:#c08ad6;--wash:rgba(192,138,214,.16)}
+  [data-state="complete"]{--accent:#45c2b3;--wash:rgba(69,194,179,.16)}
+
+  .view{flex:1;display:none;flex-direction:column}
+  .view.active{display:flex}
+
+  h1{font-size:1.5rem;margin:0;letter-spacing:.01em}
+  .lede{color:var(--muted);margin:.4rem 0 0;font-size:1rem}
+
+  /* Buttons */
+  button{
+    font:inherit;color:var(--text);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:12px;
+    min-height:var(--tap);padding:0 16px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    transition:background-color .15s ease,border-color .15s ease,transform .05s ease;
+    touch-action:manipulation;
+  }
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .btn-primary{
+    background:var(--accent);color:#0e141a;border-color:transparent;
+    font-weight:650;font-size:1.15rem;min-height:64px;width:100%;
+  }
+  .btn-ghost{background:transparent}
+  .btn-danger{color:var(--danger);border-color:var(--line)}
+  .iconbtn{background:transparent;border-color:transparent;min-width:var(--tap);padding:0 10px}
+
+  /* Home */
+  #home{justify-content:space-between}
+  .home-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .home-main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;padding:8px 0}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .program-list{margin:10px 0 0;padding:0;list-style:none;counter-reset:ex}
+  .program-list li{counter-increment:ex;display:flex;gap:12px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);color:var(--text)}
+  .program-list li:first-child{border-top:0}
+  .program-list li::before{content:counter(ex);color:var(--accent);font-weight:650;min-width:1.1em;font-variant-numeric:tabular-nums}
+  .program-list .meta{color:var(--muted);font-size:.85rem;margin-left:auto;text-align:right}
+  .eyebrow{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;margin:0 0 2px}
+  .home-foot{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:.85rem;padding-top:10px}
+
+  /* Session */
+  #session{display:none;flex-direction:column;gap:10px}
+  #session.active{display:flex}
+  .topbar{display:flex;flex-direction:column;gap:8px}
+  .progress-track{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .3s ease}
+  .topmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem}
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;padding:6px 0}
+  .phase-label{font-size:1.6rem;font-weight:650;line-height:1.15}
+  .sub-label{color:var(--muted);font-size:1.05rem;min-height:1.4em}
+  .side-badge{display:inline-block;margin-top:6px;padding:2px 12px;border-radius:99px;background:var(--wash);color:var(--accent);border:1px solid var(--accent);font-weight:600;font-size:.95rem}
+  .side-badge[hidden]{display:none}
+  .clock{
+    font-variant-numeric:tabular-nums;font-weight:750;color:var(--accent);
+    font-size:clamp(6rem,44vw,17rem);line-height:.95;margin:4px 0;
+    letter-spacing:-.02em;
+  }
+  .clock.warn{animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .cues{width:100%;max-width:460px;display:flex;flex-direction:column;gap:8px;text-align:left}
+  .cues[hidden]{display:none}
+  .cue-row{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.95rem}
+  .cue-row .k{color:var(--accent);font-weight:650;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:2px}
+  .cue-row.mistake .k{color:var(--danger)}
+
+  /* Controls */
+  .controls{display:flex;flex-direction:column;gap:10px}
+  .control-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .control-grid button{flex-direction:column;font-size:.8rem;gap:4px;min-height:60px;padding:6px 4px;line-height:1.1}
+  .control-grid .glyph{font-size:1.25rem;line-height:1}
+  .row-2{display:grid;grid-template-columns:1fr auto;gap:8px}
+  .btn-end{color:var(--danger)}
+
+  /* Complete */
+  #complete{align-items:center;justify-content:center;text-align:center;gap:18px}
+  .summary{display:flex;gap:24px;justify-content:center;margin:6px 0}
+  .summary .n{font-size:2.4rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+  .summary .l{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.06em}
+
+  /* Settings overlay */
+  .overlay{position:fixed;inset:0;background:rgba(6,10,14,.62);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .overlay.active{display:flex}
+  .sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92dvh;overflow:auto}
+  .sheet h2{margin:0 0 4px;font-size:1.2rem}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+  .set-row:first-of-type{border-top:0}
+  .set-row .label{font-size:1rem}
+  .set-row .hint{color:var(--muted);font-size:.8rem;margin-top:2px}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;border-radius:0;min-height:44px;background:transparent;padding:0 14px;color:var(--muted)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#0e141a;font-weight:650}
+  .switch{position:relative;width:58px;height:34px;flex:0 0 auto}
+  .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+  .switch .track{position:absolute;inset:0;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;transition:background-color .15s}
+  .switch .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--muted);transition:transform .15s,background-color .15s}
+  .switch input:checked ~ .track{background:var(--accent)}
+  .switch input:checked ~ .knob{transform:translateX(24px);background:#0e141a}
+  .switch input:focus-visible ~ .track{outline:3px solid var(--accent);outline-offset:2px}
+  .sheet-actions{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+
+  .disclaimer{color:var(--muted);font-size:.85rem}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <section id="home" class="view active">
+    <div class="home-top">
+      <div>
+        <p class="eyebrow">Knee rehab</p>
+        <h1>Circuit Timer</h1>
+      </div>
+      <button class="iconbtn" id="openSettings" aria-label="Settings">⚙︎</button>
+    </div>
+
+    <div class="home-main">
+      <div class="card">
+        <p class="eyebrow">Phase 2 — Full · 3×/week</p>
+        <ol class="program-list" id="programList"></ol>
+      </div>
+      <button class="btn-primary" id="startBtn">Start session</button>
+    </div>
+
+    <div class="home-foot">
+      <span id="lastSession">No sessions yet</span>
+      <span id="version"></span>
+    </div>
+  </section>
+
+  <!-- SESSION -->
+  <section id="session" class="view">
+    <div class="topbar">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="topmeta">
+        <span id="exCounter"></span>
+        <span id="statePauseNote"></span>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="phase-label" id="phaseLabel" aria-live="polite"></div>
+      <div class="sub-label" id="subLabel"></div>
+      <span class="side-badge" id="sideBadge" hidden></span>
+      <div class="clock" id="clock" role="timer" aria-live="off">0</div>
+      <div class="cues" id="cues">
+        <div class="cue-row"><span class="k">Setup</span><span id="cueSetup"></span></div>
+        <div class="cue-row"><span class="k">Cue</span><span id="cueCue"></span></div>
+        <div class="cue-row mistake"><span class="k">Common mistake</span><span id="cueMistake"></span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control-grid">
+        <button id="backBtn"><span class="glyph" aria-hidden="true">⏮</span>Back</button>
+        <button id="restartBtn"><span class="glyph" aria-hidden="true">↺</span>Restart set</button>
+        <button id="addBtn"><span class="glyph" aria-hidden="true">+15</span>Add time</button>
+        <button id="skipBtn"><span class="glyph" aria-hidden="true">⏭</span>Skip</button>
+      </div>
+      <div class="row-2">
+        <button class="btn-primary" id="pauseBtn">Pause</button>
+        <button class="btn-ghost btn-end" id="endBtn">End</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPLETE -->
+  <section id="complete" class="view">
+    <p class="eyebrow">Done</p>
+    <h1>Session complete</h1>
+    <div class="summary">
+      <div><div class="n" id="sumDuration">0:00</div><div class="l">Duration</div></div>
+      <div><div class="n" id="sumExercises">0</div><div class="l">Exercises</div></div>
+    </div>
+    <p class="disclaimer" id="completeDate"></p>
+    <button class="btn-primary" id="doneBtn" style="max-width:320px">Back to home</button>
+  </section>
+
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay" id="settingsOverlay" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="sheet">
+    <h2>Settings</h2>
+    <div class="set-row">
+      <div><div class="label">Sound</div><div class="hint">Countdown beeps and transition tones</div></div>
+      <label class="switch"><input type="checkbox" id="setSound"><span class="track"></span><span class="knob"></span></label>
+    </div>
+    <div class="set-row">
+      <div><div class="label">Tempo metronome</div><div class="hint">Click track paces each rep</div></div>
+      <label class="switch"><input type="checkbox" id="setMetro"><span class="track"></span><span class="knob"></span></label>
+    </div>
+    <div class="set-row">
+      <div><div class="label">Get-ready countdown</div><div class="hint">Before each exercise</div></div>
+      <div class="seg" id="segGetReady" role="group" aria-label="Get-ready seconds">
+        <button data-v="5">5s</button><button data-v="10">10s</button><button data-v="15">15s</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <div><div class="label">Rest length</div><div class="hint">Scale rest as you progress</div></div>
+      <div class="seg" id="segRest" role="group" aria-label="Rest multiplier">
+        <button data-v="0.75">0.75×</button><button data-v="1">1×</button><button data-v="1.25">1.25×</button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-danger" id="clearBtn">Clear all data</button>
+      <button class="btn-primary" id="closeSettings">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const APP_VERSION = "1.0.0";
+
+/* ---------- Program data ---------- */
+const PROGRAM = [
+  {
+    name:"Wall sit", type:"hold", sets:5, holdSeconds:45, restBetweenSets:30, perSide:false,
+    cues:{
+      setup:"Back flat on the wall, feet shoulder-width, about 18 inches out. Slide down to 45–60°.",
+      cue:"Shins vertical, knees over ankles, drive down through your heels.",
+      mistake:"Going to a full 90° squat — that increases pressure behind the kneecap."
+    }
+  },
+  {
+    name:"Side-lying hip abduction", type:"reps", sets:3, reps:15, secondsPerRep:5, restBetweenSets:45, perSide:true,
+    cues:{
+      setup:"On your side, bottom leg bent, top leg straight and stacked. Back against a wall.",
+      cue:"Lead with the heel, toes rotated slightly down, lift 30–45°, lower over 3 seconds.",
+      mistake:"Rolling the hip back and swinging the leg forward — that's the hip flexor doing the work."
+    }
+  },
+  {
+    name:"Eccentric step-down", type:"reps", sets:3, reps:10, secondsPerRep:5, restBetweenSets:45, perSide:true,
+    cues:{
+      setup:"Stand on one leg on a 4–6 inch step, other foot hanging off the edge.",
+      cue:"Lower the free foot over a slow four-count, tap the heel, push back up in one second.",
+      mistake:"Letting the standing knee cave inward. It tracks over the second toe."
+    }
+  },
+  {
+    name:"Spanish squat", type:"reps", sets:3, reps:10, secondsPerRep:8, restBetweenSets:60, perSide:false,
+    cues:{
+      setup:"Heavy band anchored at knee height, looped behind both knees. Step back into tension.",
+      cue:"Sit straight down with shins vertical, torso upright, hold 5 seconds at ~60°.",
+      mistake:"Letting the shins travel forward. The band exists to keep them vertical."
+    }
+  },
+  {
+    name:"Bent-knee calf raise", type:"reps", sets:3, reps:15, secondsPerRep:5, restBetweenSets:45, perSide:false,
+    cues:{
+      setup:"Flat ground, knees bent 20–30°.",
+      cue:"Hold that knee bend the whole set. Rise, pause one second, lower over three.",
+      mistake:"Straightening the knee as you rise — that hands the work back to the gastroc."
+    }
+  }
+];
+const SWITCH_SECONDS = 10;
+
+/* ---------- Settings / persistence ---------- */
+const STORE_KEY = "kneeTimer.v1";
+const defaults = { sound:true, metronome:true, getReady:10, restMult:1, lastSession:null };
+let settings = Object.assign({}, defaults);
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) settings = Object.assign({}, defaults, JSON.parse(raw));
+  }catch(e){ settings = Object.assign({}, defaults); }
+}
+function saveSettings(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(settings)); }catch(e){}
+}
+
+/* ---------- Audio (Web Audio API, no files) ---------- */
+let audioCtx = null;
+function ensureAudio(){
+  if(!audioCtx){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  if(audioCtx && audioCtx.state === "suspended"){ audioCtx.resume().catch(()=>{}); }
+}
+function tone(freq, dur, opts){
+  opts = opts || {};
+  if(!settings.sound || !audioCtx) return;
+  const t = audioCtx.currentTime + (opts.when || 0);
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = opts.type || "sine";
+  o.frequency.setValueAtTime(freq, t);
+  const peak = opts.gain != null ? opts.gain : 0.2;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(audioCtx.destination);
+  o.start(t);
+  o.stop(t + dur + 0.03);
+}
+const countdownBeep = ()=> tone(880, 0.09, {type:"square", gain:0.13});
+const blockEndTone  = ()=> tone(330, 0.24, {type:"sine",   gain:0.22});
+const accentClick   = ()=> tone(1150,0.035,{type:"square", gain:0.10});
+const softTick      = ()=> tone(680, 0.028,{type:"sine",   gain:0.05});
+function sessionCompleteTone(){
+  tone(523.25,0.18,{type:"sine",gain:0.2,when:0});
+  tone(659.25,0.18,{type:"sine",gain:0.2,when:0.16});
+  tone(783.99,0.42,{type:"sine",gain:0.22,when:0.32});
+}
+
+/* ---------- Screen Wake Lock ---------- */
+let wakeLock = null;
+async function acquireWake(){
+  try{ if("wakeLock" in navigator){ wakeLock = await navigator.wakeLock.request("screen"); } }
+  catch(e){ /* ignore */ }
+}
+function releaseWake(){
+  try{ if(wakeLock){ wakeLock.release(); } }catch(e){}
+  wakeLock = null;
+}
+
+/* ---------- Block model ---------- */
+function buildBlocks(){
+  const gr = settings.getReady;
+  const rm = settings.restMult;
+  const blocks = [];
+  PROGRAM.forEach((ex, exIndex)=>{
+    const gi = blocks.length;
+    blocks.push({type:"getready", duration:gr, exIndex, restartIndex:gi});
+    for(let s=1; s<=ex.sets; s++){
+      const workDur = ex.type === "hold" ? ex.holdSeconds : ex.reps * ex.secondsPerRep;
+      const sides = ex.perSide ? ["L","R"] : [null];
+      const setStart = blocks.length;
+      sides.forEach((side, si)=>{
+        blocks.push({
+          type:"work", duration:workDur, exIndex, set:s, side,
+          isReps: ex.type === "reps", reps:ex.reps, secondsPerRep:ex.secondsPerRep,
+          restartIndex:setStart
+        });
+        if(ex.perSide && si === 0){
+          blocks.push({type:"switch", duration:SWITCH_SECONDS, exIndex, set:s, restartIndex:setStart});
+        }
+      });
+      if(s < ex.sets){
+        blocks.push({type:"rest", duration:Math.round(ex.restBetweenSets * rm), exIndex, set:s, restartIndex:setStart});
+      }
+    }
+  });
+  blocks.push({type:"complete"});
+  return blocks;
+}
+function buildClicks(b){
+  const list = [];
+  if(b.type === "work" && b.isReps && settings.metronome){
+    for(let k=0; k<b.reps; k++){
+      const base = k * b.secondsPerRep;
+      list.push({t:base, accent:true});
+      for(let sec=1; sec<b.secondsPerRep; sec++){
+        list.push({t:base+sec, accent:false});
+      }
+    }
+  }
+  return list;
+}
+function nextWorkLabel(fromIdx){
+  for(let i=fromIdx+1; i<blocks.length; i++){
+    const b = blocks[i];
+    if(b.type === "work"){
+      const ex = PROGRAM[b.exIndex];
+      let s = ex.name;
+      if(b.side) s += " · " + (b.side === "L" ? "Left" : "Right");
+      return s;
+    }
+    if(b.type === "complete") return "Finish";
+  }
+  return "Finish";
+}
+
+/* ---------- Runtime state ---------- */
+let blocks = [], idx = 0, endTime = 0, blockDur = 0;
+let running = false, paused = false, pausedRemaining = 0;
+let rafId = null, lastSecond = null;
+let clickList = [], clickPtr = 0;
+let sessionStartMs = 0;
+
+/* ---------- DOM ---------- */
+const $ = (id)=>document.getElementById(id);
+const views = { home:$("home"), session:$("session"), complete:$("complete") };
+function showView(name){
+  Object.keys(views).forEach(k=> views[k].classList.toggle("active", k===name));
+}
+function setState(type){ $("app").setAttribute("data-state", type); }
+
+/* ---------- Session control ---------- */
+function startSession(){
+  ensureAudio();
+  blocks = buildBlocks();
+  running = true; paused = false;
+  sessionStartMs = Date.now();
+  showView("session");
+  acquireWake();
+  enterBlock(0, performance.now());
+  updatePauseBtn();
+  if(!rafId) loop();
+}
+function enterBlock(i, startPerf){
+  idx = i;
+  const b = blocks[i];
+  if(b.type === "complete"){ finishSession(); return; }
+  blockDur = b.duration;
+  endTime = startPerf + blockDur * 1000;
+  lastSecond = null;
+  clickList = buildClicks(b);
+  clickPtr = 0;
+  renderStatic(b);
+  setState(b.type);
+  updateClock(Math.ceil(blockDur));
+}
+function gotoBlock(i){
+  if(i < 0) i = 0;
+  if(i >= blocks.length) i = blocks.length - 1;
+  if(blocks[i].type === "complete"){ finishSession(); return; }
+  enterBlock(i, performance.now());
+  if(paused) pausedRemaining = blockDur;
+}
+function togglePause(){
+  if(!running) return;
+  if(paused){
+    paused = false;
+    endTime = performance.now() + pausedRemaining * 1000;
+  } else {
+    paused = true;
+    pausedRemaining = (endTime - performance.now()) / 1000;
+  }
+  updatePauseBtn();
+}
+function updatePauseBtn(){
+  const btn = $("pauseBtn");
+  btn.textContent = paused ? "Resume" : "Pause";
+  $("statePauseNote").textContent = paused ? "Paused" : "";
+  $("clock").classList.toggle("warn", false);
+}
+function addTime(){
+  if(!running) return;
+  blockDur += 15;
+  if(paused) pausedRemaining += 15;
+  else endTime += 15000;
+}
+function finishSession(){
+  running = false; paused = false;
+  releaseWake();
+  sessionCompleteTone();
+  const today = new Date();
+  settings.lastSession = today.toISOString().slice(0,10);
+  saveSettings();
+  const secs = Math.round((Date.now() - sessionStartMs)/1000);
+  $("sumDuration").textContent = fmtClock(secs);
+  $("sumExercises").textContent = String(PROGRAM.length);
+  $("completeDate").textContent = today.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  showView("complete");
+  setState("complete");
+}
+function endSession(){
+  if(!running) return;
+  if(!window.confirm("End this session?")) return;
+  running = false; paused = false;
+  releaseWake();
+  renderHome();
+  showView("home");
+  $("app").removeAttribute("data-state");
+}
+
+/* ---------- Main loop (timestamp-based) ---------- */
+function loop(){
+  rafId = requestAnimationFrame(loop);
+  if(!running || paused) return;
+  const now = performance.now();
+  let remaining = (endTime - now) / 1000;
+
+  // Flush any blocks whose time has elapsed (handles backgrounded catch-up)
+  while(remaining <= 0 && running){
+    const overshoot = -remaining;
+    const next = blocks[idx+1];
+    if(!next || next.type === "complete"){ finishSession(); return; }
+    if(overshoot < 1.2) blockEndTone();
+    enterBlock(idx+1, endTime); // chain from absolute end -> keeps timeline accurate
+    remaining = (endTime - now) / 1000;
+  }
+
+  // Metronome (skip stale clicks after unhide)
+  if(clickList.length){
+    const elapsed = blockDur - remaining;
+    while(clickPtr < clickList.length && clickList[clickPtr].t <= elapsed){
+      const c = clickList[clickPtr++];
+      if(elapsed - c.t < 0.4){ c.accent ? accentClick() : softTick(); }
+    }
+  }
+
+  // Whole-second display + countdown beeps
+  const shown = Math.max(0, Math.ceil(remaining));
+  if(shown !== lastSecond){
+    if(lastSecond !== null && (shown === 3 || shown === 2 || shown === 1)) countdownBeep();
+    lastSecond = shown;
+    updateClock(shown);
+    $("clock").classList.toggle("warn", shown <= 3 && shown > 0);
+  }
+}
+
+/* ---------- Rendering ---------- */
+function updateClock(sec){ $("clock").textContent = String(sec); }
+function fmtClock(total){
+  const m = Math.floor(total/60), s = total%60;
+  return m + ":" + String(s).padStart(2,"0");
+}
+function renderStatic(b){
+  const badge = $("sideBadge");
+  const cues = $("cues");
+  const ex = PROGRAM[b.exIndex];
+
+  if(b.type === "work"){
+    $("phaseLabel").textContent = ex.name;
+    $("subLabel").textContent = "Set " + b.set + " of " + ex.sets;
+    if(b.side){ badge.hidden = false; badge.textContent = (b.side === "L" ? "Left side" : "Right side"); }
+    else badge.hidden = true;
+    $("cueSetup").textContent = ex.cues.setup;
+    $("cueCue").textContent = ex.cues.cue;
+    $("cueMistake").textContent = ex.cues.mistake;
+    cues.hidden = false;
+  } else {
+    cues.hidden = true;
+    badge.hidden = true;
+    if(b.type === "getready"){
+      $("phaseLabel").textContent = "Get ready";
+      $("subLabel").textContent = "Next up: " + nextWorkLabel(idx);
+    } else if(b.type === "rest"){
+      $("phaseLabel").textContent = "Rest";
+      $("subLabel").textContent = "Next up: " + nextWorkLabel(idx);
+    } else if(b.type === "switch"){
+      $("phaseLabel").textContent = "Switch sides";
+      $("subLabel").textContent = "Next: " + nextWorkLabel(idx);
+    }
+  }
+  $("exCounter").textContent = "Exercise " + (b.exIndex+1) + " of " + PROGRAM.length;
+  const frac = blocks.length > 1 ? idx / (blocks.length - 1) : 0;
+  $("progressFill").style.width = (frac*100).toFixed(1) + "%";
+}
+
+function renderHome(){
+  const list = $("programList");
+  list.innerHTML = "";
+  PROGRAM.forEach(ex=>{
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.textContent = ex.name;
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    const detail = ex.type === "hold"
+      ? (ex.holdSeconds + "s hold")
+      : (ex.reps + " reps");
+    meta.textContent = ex.sets + " × " + detail + (ex.perSide ? " · per side" : "");
+    li.appendChild(name); li.appendChild(meta);
+    list.appendChild(li);
+  });
+  $("lastSession").textContent = settings.lastSession
+    ? "Last session: " + new Date(settings.lastSession + "T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})
+    : "No sessions yet";
+  $("version").textContent = "v" + APP_VERSION.split(".").slice(0,2).join(".");
+}
+
+/* ---------- Settings UI ---------- */
+function syncSettingsUI(){
+  $("setSound").checked = settings.sound;
+  $("setMetro").checked = settings.metronome;
+  document.querySelectorAll("#segGetReady button").forEach(b=>{
+    b.setAttribute("aria-pressed", String(Number(b.dataset.v) === settings.getReady));
+  });
+  document.querySelectorAll("#segRest button").forEach(b=>{
+    b.setAttribute("aria-pressed", String(Number(b.dataset.v) === settings.restMult));
+  });
+}
+function openSettings(){ syncSettingsUI(); $("settingsOverlay").classList.add("active"); }
+function closeSettings(){ $("settingsOverlay").classList.remove("active"); }
+
+/* ---------- Wiring ---------- */
+function init(){
+  loadSettings();
+  renderHome();
+  syncSettingsUI();
+
+  $("startBtn").addEventListener("click", startSession);
+  $("pauseBtn").addEventListener("click", ()=>{ ensureAudio(); togglePause(); });
+  $("skipBtn").addEventListener("click", ()=>{ ensureAudio(); gotoBlock(idx+1); });
+  $("backBtn").addEventListener("click", ()=>{ ensureAudio(); gotoBlock(idx-1); });
+  $("restartBtn").addEventListener("click", ()=>{ ensureAudio(); gotoBlock(blocks[idx].restartIndex != null ? blocks[idx].restartIndex : idx); });
+  $("addBtn").addEventListener("click", ()=>{ ensureAudio(); addTime(); });
+  $("endBtn").addEventListener("click", endSession);
+  $("doneBtn").addEventListener("click", ()=>{ renderHome(); showView("home"); $("app").removeAttribute("data-state"); });
+
+  $("openSettings").addEventListener("click", openSettings);
+  $("closeSettings").addEventListener("click", closeSettings);
+  $("settingsOverlay").addEventListener("click", (e)=>{ if(e.target === $("settingsOverlay")) closeSettings(); });
+
+  $("setSound").addEventListener("change", e=>{ settings.sound = e.target.checked; saveSettings(); });
+  $("setMetro").addEventListener("change", e=>{ settings.metronome = e.target.checked; saveSettings(); });
+  document.querySelectorAll("#segGetReady button").forEach(b=>{
+    b.addEventListener("click", ()=>{ settings.getReady = Number(b.dataset.v); saveSettings(); syncSettingsUI(); });
+  });
+  document.querySelectorAll("#segRest button").forEach(b=>{
+    b.addEventListener("click", ()=>{ settings.restMult = Number(b.dataset.v); saveSettings(); syncSettingsUI(); });
+  });
+  $("clearBtn").addEventListener("click", ()=>{
+    if(!window.confirm("Clear all saved settings and history?")) return;
+    try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+    settings = Object.assign({}, defaults);
+    saveSettings(); syncSettingsUI(); renderHome();
+  });
+
+  // Keyboard: space toggles start/pause
+  document.addEventListener("keydown", (e)=>{
+    if(e.code === "Space" && e.target.tagName !== "BUTTON" && e.target.tagName !== "INPUT"){
+      e.preventDefault();
+      if(views.session.classList.contains("active") && running){ ensureAudio(); togglePause(); }
+      else if(views.home.classList.contains("active")){ startSession(); }
+    }
+  });
+
+  // Backgrounding: recompute happens automatically (timestamp-based); re-acquire wake + resume audio
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "visible"){
+      if(running && !paused) acquireWake();
+      if(audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(()=>{});
+    }
+  });
+
+  $("version").textContent = "v" + APP_VERSION.split(".").slice(0,2).join(".");
+}
+init();
+</script>
+</body>
+</html>
