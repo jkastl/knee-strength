@@ -39,8 +39,9 @@ Pages serves the repo root.
 - **Hosting:** GitHub Pages from `main` at repo root. `.nojekyll` is present so
   the file is served verbatim. Target context is HTTPS on a phone, not `file://`.
 - **Versioning:** `APP_VERSION` in the `<script>` is the source of truth, shown
-  on the home screen as `v<major>.<minor>`. Bump it (semver) with every
-  functional change and mention the bump in the commit message.
+  on the home screen as `v<version>`. Use `x.y` format only (no patch segment):
+  bump the minor for changes, the major for large reworks. Mention the bump in
+  the commit message.
 - **Timer invariant:** remaining time is always derived from an absolute
   `performance.now()` target (`endTime`), never decremented in a loop. Preserve
   this — it's what keeps the timer accurate across backgrounded tabs.

@@ -127,8 +127,8 @@ Large tap targets, minimum 48px. Needed:
 
 ## Versioning
 
-Display an app version on the home screen, starting at **1.0** and bumping with
-typical semantic versioning as the app changes.
+Display an app version on the home screen, in `x.y` format only (e.g. **1.1**):
+bump the minor for changes and the major for large reworks.
 
 ## Design direction
 
