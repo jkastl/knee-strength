@@ -6,7 +6,7 @@ dependencies — and is served as a static site from GitHub Pages.
 
 **Live app:** https://jkastl.github.io/knee-strength/
 
-## The circuit (Phase 2)
+## The circuit
 
 Wall sit → Side-lying hip abduction → Eccentric step-down → Spanish squat →
 Bent-knee calf raise. Each exercise finishes all its sets before the next
