@@ -30,8 +30,9 @@
     overscroll-behavior:none;
   }
   #app{
-    min-height:100%;
-    min-height:100dvh;
+    height:100%;
+    height:100dvh;
+    overflow:hidden;
     display:flex;
     flex-direction:column;
     max-width:560px;
@@ -46,8 +47,9 @@
   [data-state="switch"]{--accent:#c08ad6;--wash:rgba(192,138,214,.16)}
   [data-state="complete"]{--accent:#45c2b3;--wash:rgba(69,194,179,.16)}
 
-  .view{flex:1;display:none;flex-direction:column}
+  .view{flex:1;min-height:0;display:none;flex-direction:column}
   .view.active{display:flex}
+  #home,#complete{overflow-y:auto;overscroll-behavior:contain}
 
   h1{font-size:1.5rem;margin:0;letter-spacing:.01em}
   .lede{color:var(--muted);margin:.4rem 0 0;font-size:1rem}
@@ -85,26 +87,47 @@
   .eyebrow{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;margin:0 0 2px}
   .home-foot{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:.85rem;padding-top:10px}
 
-  /* Session */
-  #session{display:none;flex-direction:column;gap:10px}
-  #session.active{display:flex}
+  /* Session
+     Fixed three-row grid: topbar / stage / controls. The stage row is the only
+     flexible one, so the controls stay pinned to the bottom of the viewport and
+     never move as the content above them changes. */
+  #session{display:none;min-height:0;gap:10px}
+  #session.active{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
   .topbar{display:flex;flex-direction:column;gap:8px}
   .progress-track{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
   .progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .3s ease}
   .topmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem}
-  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;padding:6px 0}
-  .phase-label{font-size:1.6rem;font-weight:650;line-height:1.15}
-  .sub-label{color:var(--muted);font-size:1.05rem;min-height:1.4em}
-  .side-badge{display:inline-block;margin-top:6px;padding:2px 12px;border-radius:99px;background:var(--wash);color:var(--accent);border:1px solid var(--accent);font-weight:600;font-size:.95rem}
+  .stage{
+    min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);
+    justify-items:center;text-align:center;padding:6px 0;
+  }
+  /* Every row above the cue panel reserves its tallest possible height, so the
+     clock sits in the same place whether or not a side badge is showing and
+     whether the exercise name runs to one line or two. */
+  .stage-head{width:100%;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .phase-label{
+    font-size:1.6rem;font-weight:650;line-height:1.15;
+    min-height:2.3em;display:flex;align-items:center;justify-content:center;
+  }
+  .sub-label{
+    color:var(--muted);font-size:1.05rem;line-height:1.4;
+    min-height:2.8em;display:flex;align-items:center;justify-content:center;
+  }
+  .badge-slot{min-height:28px;margin-top:4px;display:flex;align-items:center;justify-content:center}
+  .side-badge{display:inline-block;padding:2px 12px;border-radius:99px;background:var(--wash);color:var(--accent);border:1px solid var(--accent);font-weight:600;font-size:.95rem}
   .side-badge[hidden]{display:none}
   .clock{
     font-variant-numeric:tabular-nums;font-weight:750;color:var(--accent);
-    font-size:clamp(6rem,44vw,17rem);line-height:.95;margin:4px 0;
+    font-size:clamp(3.5rem,min(44vw,28vh),17rem);line-height:.95;margin:4px 0;
     letter-spacing:-.02em;
   }
   .clock.warn{animation:pulse 1s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.55}}
-  .cues{width:100%;max-width:460px;display:flex;flex-direction:column;gap:8px;text-align:left}
+  .cues{
+    width:100%;max-width:460px;align-self:stretch;min-height:0;overflow-y:auto;
+    display:flex;flex-direction:column;gap:8px;text-align:left;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
   .cues[hidden]{display:none}
   .cue-row{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.95rem}
   .cue-row .k{color:var(--accent);font-weight:650;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:2px}
@@ -190,9 +213,11 @@
     </div>
 
     <div class="stage">
-      <div class="phase-label" id="phaseLabel" aria-live="polite"></div>
-      <div class="sub-label" id="subLabel"></div>
-      <span class="side-badge" id="sideBadge" hidden></span>
+      <div class="stage-head">
+        <div class="phase-label" id="phaseLabel" aria-live="polite"></div>
+        <div class="sub-label" id="subLabel"></div>
+        <div class="badge-slot"><span class="side-badge" id="sideBadge" hidden></span></div>
+      </div>
       <div class="clock" id="clock" role="timer" aria-live="off">0</div>
       <div class="cues" id="cues">
         <div class="cue-row"><span class="k">Setup</span><span id="cueSetup"></span></div>
@@ -262,7 +287,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.2";
+const APP_VERSION = "1.3";
 
 /* ---------- Program data ---------- */
 const PROGRAM = [

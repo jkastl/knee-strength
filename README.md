@@ -45,6 +45,11 @@ Pages serves the repo root.
 - **Timer invariant:** remaining time is always derived from an absolute
   `performance.now()` target (`endTime`), never decremented in a loop. Preserve
   this — it's what keeps the timer accurate across backgrounded tabs.
+- **Anchored session layout:** the running screen is a fixed three-row grid
+  (topbar / stage / controls) inside a `100dvh` app shell, and every row above
+  the cue panel reserves its tallest height. The cue panel is the only flexible
+  row and scrolls internally. Keep it that way — it's what stops the controls
+  and the countdown from shifting when cues or the side badge come and go.
 - **Block model:** a session is a flat `blocks[]` list (getready / work / switch /
   rest / complete) built by `buildBlocks()`. Skip/back move by one block, which
   is what makes crossing side-switch and exercise boundaries behave.
