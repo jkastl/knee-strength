@@ -6,7 +6,7 @@ file and hosted on GitHub Pages.
 ## Constraints
 
 - **One file.** All HTML, CSS, and JS inline. No build step, no bundler, no npm.
-- **No external dependencies.** No CDN links, no web fonts fetched at runtime, no audio files. It works fully offline once loaded.
+- **No external dependencies.** No CDN links, no web fonts fetched at runtime, no audio files. It works fully offline once loaded. The one outside request is an anonymous visit count (GoatCounter, no cookies) in the `<head>`, which fails quietly offline and never blocks the timer.
 - **Hosted on GitHub Pages** at the repo root. Develop for that context — served over HTTPS from a static host, not opened from the filesystem.
 - **Mobile-first.** Primary use is a phone propped on the floor while I'm on a mat. The timer must be legible from about four feet away, and every control must be hittable one-handed with sweaty hands. Assume a ~390px viewport as the design target; desktop is secondary.
 - Vanilla JS. No framework.
